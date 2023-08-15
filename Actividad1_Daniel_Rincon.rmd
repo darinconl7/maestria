@@ -1,0 +1,390 @@
+---
+title: "Actividad1"
+output: html_document
+date: "2023-08-13"
+editor_options: 
+  markdown: 
+    wrap: 72
+---
+
+options(encoding = "UTF-8")
+
+# Actividad 1
+
+## Caso : Análisis del mercado inmobiliario en Cali
+
+# Indice
+
+1.[Introducción](#introduccion)
+
+2.[Objetivos](#objetivos)
+
+3.[Métodos](#metodos)
+
+4.[Resultados](#resultados)
+
+5.[Discusión](#discusion)
+
+6.[Conclusiones](#conclusiones)
+
+7.[Anexos](#anexos)
+
+## Introducción
+
+Este informe estadístico se erige como una herramienta valiosa para B&C.
+A través de este estudio se realizara un analisis de las fluctuaciones
+en el precio de las viviendas en diversas áreas de Cali, sopesaremos las
+preferencias de la comunidad y revelaremos las características que
+despiertan el interésde los compradores. En esencia, este informe es un
+faro que guía a la empresa en la toma de decisiones, destilando una
+visión clara de su nicho de mercado, orquestando estrategias de
+marketing efectivas, estableciendo precios de venta adecuados y tejiendo
+una red de servicios personalizados.
+
+Así, mientras B&C se adentra en el tejido de la comunidad inmobiliaria
+de Cali, esperamos que con el uso de las herramientas analiticas que se
+presentan la empresa logre encontrar una posición privilegiada para
+llevar a cabo transformaciones significativas, impulsar el desarrollo
+económico regional y no ser solo un agente de bienes raíces, sino un
+guía confiable y un socio en los sueños de los buscadores de hogares.
+
+## Objetivos {#objetivos}
+
+Este informe estadístico se presenta como una herramienta estratégica
+con el propósito de guiar sus decisiones empresariales basado en la
+muestra de datos otorgada. Con los siguientes objetivos:
+
+**Identificar Oportunidades de Negocio:** El objetivo principal de este
+informe es descubrir y evaluar las áreas de mayor potencial de negocio
+para B&C en el mercado de bienes raíces de Cali. Mediante el análisis de
+datos, se pretende identificar las zonas geográficas y segmentos de
+mercado que presenten oportunidades prometedoras para el crecimiento y
+expansión de la empresa.
+
+**Analizar el Crecimiento por Zonas:** Se busca llevar a cabo un análisis
+comparativo de las distintas áreas de Cali para determinar cuáles están
+experimentando un crecimiento más dinámico en términos de precio de
+viviendas, demanda del mercado y preferencias de los compradores. Este
+análisis permitirá a B&C focalizar sus esfuerzos y recursos en las
+regiones con mayor potencial de rentabilidad.
+
+**Aplicar Métodos Estadísticos Relevantes:** Para lograr resultados
+confiables y significativos, se emplearán métodos estadísticos
+fundamentales en el análisis de datos que permitirán examinar patrones,
+variaciones y relaciones en los datos recopilados, proporcionando una
+base sólida para la toma de decisiones informada.
+
+## Métodos {#metodos}
+
+Iniciamos realizando la importación de librerias ncesarias para nuestro
+proceso.
+
+```{r message=FALSE, warning=FALSE}
+#install.packages('mice')install.packages("VIM")
+if(!require(mice)){
+  install.packages(mice)
+  
+}
+library(mice)
+
+# Instalaremos y cargaremos la librería ggplot2 si aún no está instalada
+if (!require(ggplot2)) {
+  install.packages("ggplot2")
+}
+library(ggplot2)
+
+if(!require(VIM)){
+  install.packages(VIM)
+  
+}
+library(VIM)
+
+if(!require(dplyr)){
+  install.packages(dplyr)
+  
+}
+library(dplyr)
+
+if (!require(treemap)) {
+  install.packages("treemap")
+}
+library(treemap)
+
+if(!require(readr)){
+  install.packages(readr)
+}
+library(readr)
+
+```
+
+Primero importamos los datos:
+
+```{r message=FALSE, warning=FALSE}
+
+data_viviendas <- read.csv("~/Personal/Javeriana/Maestria/MetodosSimulacionEstadistica/vivienda_faltantes.csv")
+head(data_viviendas)
+```
+
+El resumen de la base de datos:
+
+```{r}
+summary(data_viviendas)
+```
+
+Si analizamos el comportamiento de datos perdidos, encontramos que:
+
+```{r}
+md.pattern(data_viviendas)
+```
+
+```{r message=FALSE, warning=FALSE}
+if (!require(naniar)) {
+  install.packages("naniar")
+}
+library(naniar)
+
+vis_miss(data_viviendas)
+```
+
+A partir del gráfico anterior, es evidente que existen tres registros con valores nulos en la columna "id". Estos registros serán eliminados, considerando que esta columna debe contener valores únicos y no puede admitir valores nulos.
+
+#### Limpieza y Transformación de Datos
+
+```{r message=FALSE, warning=FALSE}
+data_viviendas <- data_viviendas[complete.cases(data_viviendas$id), ]
+```
+
+```{r message=FALSE, warning=FALSE}
+data_viviendas <- data_viviendas[complete.cases(data_viviendas$areaconst), ]
+```
+
+Una vez realizada la limpieza procedemos a eliminar las tildes y caracteres especiales que estaban contenidos en nuestros registros y generaba una división de los datos, para ello realizamos los siguientes procesos:
+
+```{r message=FALSE, warning=FALSE}
+# Eliminar las tildes y estandarizar la columna "barrio"
+data_viviendas <- data_viviendas %>%
+  mutate(barrio = iconv(barrio, to = "ASCII//TRANSLIT"))
+```
+
+```{r message=FALSE, warning=FALSE}
+# Reemplazar '?C' por 'e' en la columna "barrio"
+data_viviendas <- data_viviendas %>%
+  mutate(barrio = gsub("\\?C", "e", barrio))
+```
+
+```{r message=FALSE, warning=FALSE}
+# Reemplazar 'APARTAMENTO' por 'apartamento' en la columna "tipo"
+data_viviendas <- data_viviendas %>%
+  mutate(tipo = gsub("\\APARTAMENTO", "apartamento", tipo)) %>%
+  mutate(tipo = gsub("\\Apartamento", "apartamento", tipo))
+```
+
+```{r}
+# Reemplazar 'el ingenio' por 'ingenio' en la columna "barrio"
+data_viviendas <- data_viviendas %>%
+  mutate(barrio = gsub('el ingenio', 'ingenio', barrio))
+```
+
+## Resultados {#resultados}
+
+A continuación, vamos a proceder a estudiar nuestro datos mediante forma grafica para poder realizar un mejor analisis.
+
+```{r message=FALSE, warning=FALSE}
+# Instalaremos y cargaremos la librería ggplot2 si aún no está instalada
+if (!require(ggplot2)) {
+  install.packages("ggplot2")
+}
+library(ggplot2)
+```
+Comenzaremos por identificar las zonas en nuestra base de datos que poseen un mayor número de registros. En esta etapa, se busca establecer una correlación entre la cantidad de registros y la calidad del análisis, considerando que un mayor volumen de datos conlleva a un análisis más sólido y detallado.
+
+```{r message=FALSE, warning=FALSE}
+# Creamos el gráfico circular con etiquetas de valor centradas y radio expandido
+grafico_pie <- ggplot(data_viviendas, aes(x = "", fill = zona)) +
+  geom_bar(stat = "count", width = 1) +
+  geom_text(aes(label = ..count..), stat = "count", position = position_stack(vjust = 0.5), size = 4) +  # Etiquetas centradas y más grandes
+  coord_polar(theta = "y") +
+  expand_limits(y = c(0, max(data_viviendas$count) + 20)) +  # Expandir el radio del gráfico
+  labs(title = "Estratos por Zona",
+       fill = "Zona") +
+  theme_minimal()
+
+print(grafico_pie)
+
+```
+
+A partir del gráfico anterior, podemos notar que la zona sur registra la mayor cantidad de datos. Ahora, siguiendo nuestra explicación previa, nos adentraremos en un análisis más detallado de esta zona mas adelante.
+
+
+```{r message = FALSE, warning= FALSE}
+# Crear un histograma con rangos de 10 en el campo "areconst"
+grafico_histograma <- ggplot(data_viviendas, aes(x = areaconst)) +
+  geom_histogram(binwidth = 10, fill = "steelblue", color = "black") +
+  labs(title = "Histograma de Area Construida por Rangos de 10mts",
+       x = "Area Construida") +
+  scale_x_continuous(breaks = seq(0, max(data_viviendas$areaconst), by = 100)) +
+    theme_minimal()
+print(grafico_histograma)
+```
+
+Calcular la moda de la muestra de datos representada en el histograma previo será esencial para establecer una submuestra de estudio más precisa. Por consiguiente:
+
+```{r message=FALSE, warning=FALSE}
+#Función para obtener la moda de una tabla en función de la columna definida.
+mode <- function(x) {
+   return(as.numeric(names(which.max(table(x)))))
+}
+
+mode(data_viviendas$areaconst) # 1
+```
+#### Análisis De Los Costos De Las Propiedades Por Zona Para Una Rango De Datos
+
+En la tabla subsiguiente, se refleja la influencia de nuestras observaciones en el histograma previo. En consecuencia, hemos seleccionado un intervalo de área construida entre 55 y 65 metros, definiendo además los valores máximos y mínimos de las propiedades dentro de este rango.
+
+```{r}
+if (!require(dplyr)) {
+  install.packages("dplyr")
+}
+library(dplyr)
+
+resultados <- data_viviendas %>%
+  filter(areaconst >= 55 & areaconst<= 65) %>%
+  group_by(zona) %>%
+  count() %>%
+  left_join(data_viviendas %>%
+              filter(areaconst >= 55 & areaconst<= 65) %>%
+              group_by(zona) %>%
+              summarize(minimo = min(preciom, na.rm = TRUE),
+                        maximo = max(preciom, na.rm = TRUE)),
+            by = "zona") %>%
+  select(zona, cantidad_registros = n, minimo, maximo)
+
+print(resultados)
+
+```
+En virtud de esta evaluación, resalta que las propiedades de mayor valor se localizan en las zonas norte, sur y oeste, mientras que las más asequibles se encuentran en las zonas centro y oriente. Dado que nuestra muestra de datos se concentra mayormente en la zona sur, resulta sensato llevar a cabo un análisis más exhaustivo de este territorio, debido a la profusión de registros, lo cual podría implicar un mayor interés para nuestra investigación.
+
+Siguiendo esta línea de pensamiento, procederemos a examinar la cantidad de registros por barrio en dicha zona. A tal efecto, presentamos la siguiente tabla:
+
+```{r message=FALSE, warning=FALSE}
+resultados_barrios_sur <- data_viviendas %>%
+  filter(zona == "Zona Sur") %>%
+  group_by(barrio) %>%
+  count() %>%
+  select(barrio, cantidad_registros = n) %>%
+  arrange(desc(cantidad_registros))
+
+print(resultados_barrios_sur)
+
+```
+
+Los datos que se encuentran en la tabla anterior se pueden observar de igual forma en el siguiente grafico de mosaico, con lo cual consideramos que los barrios en los que vamos a enfocar nuestro estudio seran: Valle del lili, Ciudad Jardín y Pance.
+
+```{r}
+treemap(resultados_barrios_sur, 
+        index = "barrio",
+        vSize = "cantidad_registros",
+        type = "index")
+```
+
+De acuerdo al anterior previamente realizado vamos a tomar como ejemplo los datos para el barrio del **Valle de Lili**, para ello definimos una nueva muestra de datos.
+
+#### Valle de Lili
+
+```{r}
+data_viviendas_lili <- data_viviendas %>%
+  select(piso, estrato, preciom, areaconst, parquea, banios, habitac, barrio, tipo) %>%
+  filter(barrio == "valle del lili")
+
+print(head(data_viviendas_lili,15))
+```
+Una vez más, emprendemos la exploración de datos correspondiente, revelando que en este barrio se hallan viviendas que oscilan entre los 40 y 932 metros cuadrados. Sin embargo, la mayoría de ellas están en el rango del primer cuartil, con un área de 63 metros cuadrados. En cuanto al estrato, prevalece el estrato 4, mientras que el precio promedio se sitúa en 243.2 millones. En su mayoría, son apartamentos con tres habitaciones y un parqueadero.
+
+```{r pressure, echo=FALSE}
+summary(data_viviendas_lili)
+```
+A continuación, presentamos la representación gráfica correspondiente a esta muestra.
+```{r}
+
+grafico_lineal_lili <- ggplot(data_viviendas_lili, aes(x = areaconst, y = preciom)) +
+  geom_point(aes(color = as.factor(estrato)), size = 1.0) +  # Ajustar el tamaño de las líneas
+  labs(title = "Relación entre Precios de Muebles y Área Construida",
+       x = "Área Construida",
+       y = "Precio de Muebles",
+       color = "Estrato") +
+  scale_color_manual(values = c("red", "blue", "green", "purple", "orange")) +
+  theme_minimal()
+
+# Imprimir el gráfico lineal
+print(grafico_lineal_lili)
+
+```
+
+Como se puede apreciar, la mayoría de las propiedades se concentran en los estratos 4 y 5, siendo especialmente notable la predominancia del estrato 4.
+
+Vamos a realizar un zoom enfocandonos en aquellas areas menores a 250.
+
+```{r}
+data_viviendas_lili_250 <- data_viviendas_lili %>%
+  filter(areaconst <= 250)
+
+grafico_lineal_lili_250 <- ggplot(data_viviendas_lili_250, aes(x = areaconst, y = preciom)) +
+  geom_point(aes(color = as.factor(estrato), shape = factor(tipo)), size = 1.2) +  # Ajustar el tamaño de las líneas
+  labs(title = "Relación entre Precios de Muebles y Área Construida",
+       x = "Área Construida",
+       y = "Precio de Muebles",
+       color = "Estrato") +
+  scale_color_manual(values = c("red", "blue", "green", "purple", "orange")) +
+  scale_shape_manual(values = c(4, 3)) +  # 4: Cruz, 3: Caja 
+  theme_minimal()
+
+# Imprimir el gráfico lineal
+print(grafico_lineal_lili_250)
+
+```
+
+Como se evidencia en el gráfico previo, tanto casas como apartamentos presentan áreas construidas similares, no obstante, sus precios difieren considerablemente. Es claramente perceptible que las propiedades más costosas son las casas, gracias a su extensión en el área construida, mientras que los apartamentos, debido a su menor tamaño, resultan más económicos. Sin embargo, al enfocarnos en los valores cercanos a 125 millones en el área construida, surge un punto interesante: es posible hallar casas más asequibles que apartamentos, pese a que, en teoría, el costo de una casa debería superar el de un apartamento. Este escenario, revela una oportunidad de negocio potencial, ya que adquirir casas a bajo costo y realizar algunas mejoras podrían permitir su venta a un precio mayor, lo cual generaría beneficios significativos para la inmobiliaria.
+
+Por otra parte, se requiere definir si en nuestra base de datos en valor para NA se refiere a que la propiedad no cuenta con parqueadero y si en definitiva son valores perdidos, ya que un estudio teniendo en cuenta el valor de las propiedades con este valor mejor definido mejoraria bastante nuestro analisis. Tal como se muestra en la siguiente tabla.
+
+```{r}
+data_viviendas_lili_250_p <- data_viviendas_lili_250 %>%
+  group_by(parquea) %>%
+  count() %>% 
+  select(parquea, cantidad_registros = n)
+
+print(data_viviendas_lili_250_p)
+
+```
+## Discusión {#discucion}
+
+El análisis realizado hasta el momento nos ha proporcionado una visión general de los datos y ha señalado áreas clave para una exploración más profunda. En este sentido, hemos observado que la zona sur se destaca como la que registra la mayor cantidad de datos, lo que nos motiva a sumergirnos en un análisis más exhaustivo de esta región.
+
+En respuesta a esta observación, hemos procedido a identificar un intervalo de área construida entre 55 y 65 metros cuadrados, destacando los valores máximo y mínimo dentro de esta franja. Este enfoque nos permite establecer parámetros más precisos para nuestro estudio y afinar nuestro análisis.
+
+La distribución de las propiedades según la zona y su relación con el valor nos proporciona información valiosa. En particular, se destaca que las zonas norte, sur y oeste albergan propiedades de mayor valor, mientras que las zonas centro y oriente se caracterizan por propiedades más asequibles. La concentración de registros en la zona sur nos incentiva a un análisis más profundo de esta área, ya que la riqueza de información podría revelar patrones interesantes y oportunidades de estudio.
+
+Dentro de este contexto, el análisis de propiedades en el "Valle del Lili" ha desvelado características significativas. En términos de área construida, la mayoría de las viviendas se encuentran en el primer cuartil, con un promedio de 63 metros cuadrados. El estrato predominante es el 4, y el precio promedio se establece en 243.2 millones. Mayoritariamente, estas propiedades corresponden a apartamentos con tres habitaciones y un parqueadero.
+
+Un aspecto intrigante que se ha observado es la relación entre el área construida y el precio. Aunque el tamaño de las casas y apartamentos puede ser similar en ciertos casos, los precios varían significativamente. Resulta notable que algunas casas pueden tener precios más asequibles que los apartamentos, lo cual presenta una interesante oportunidad de negocio al adquirir y mejorar casas para su posterior venta.
+
+## Conclusiones {#conclusiones}
+
+1. El análisis inicial destaca que la zona sur concentra la mayor cantidad de registros, lo que justifica un estudio más detallado en esta área.
+
+2. Mediante un rango de área construida entre 55 y 65 metros cuadrados, definimos valores límites que revelan propiedades de mayor valor en las zonas norte, sur y oeste, y opciones más económicas en las zonas centro y oriente.
+
+3. La zona sur emerge como punto focal de interés debido a la abundancia de registros, lo que sugiere su relevancia para futuras investigaciones.
+
+4. Barrios específicos como "Valle del Lili", "Ciudad Jardín" y "Pance" se destacan como posibles focos de estudio, basados en la cantidad de registros y características observadas.
+
+5. Al examinar detalladamente el "Valle del Lili", notamos que la mayoría de propiedades en este barrio son apartamentos con tres habitaciones y un parqueadero, con un área predominante en el rango del primer cuartil (63 metros cuadrados).
+
+6. El estrato 4 prevalece en el "Valle del Lili", y el precio promedio es de 243.2 millones, lo que sugiere oportunidades de inversión y mercado.
+
+7. Los estratos 4 y 5 son predominantes en la zona estudiada, con el estrato 4 destacándose significativamente.
+
+8. Un análisis detallado en áreas menores a 250 metros cuadrados revela diferencias notables en precios entre casas y apartamentos, presentando oportunidades de inversión.
+
+7.[Anexos](#anexos)
+
